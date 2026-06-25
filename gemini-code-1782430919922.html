@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Retro Guestbook</title>
+    <style>
+        body {
+            background-color: #008080; /* Matching the homepage teal */
+            font-family: "Times New Roman", Times, serif;
+            color: black;
+        }
+
+        .window {
+            background-color: #c0c0c0;
+            border: 2px solid;
+            border-color: #ffffff #808080 #808080 #ffffff;
+            width: 550px;
+            margin: 30px auto;
+            padding: 2px;
+        }
+
+        .title-bar {
+            background: linear-gradient(90deg, #800080, #ff00ff); /* Fun purple gradient for the guestbook */
+            color: white;
+            padding: 3px 5px;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 15px;
+            border: 1px solid #808080;
+            margin: 5px;
+            background-color: #fff;
+        }
+
+        /* Form styling */
+        form {
+            background-color: #c0c0c0;
+            padding: 10px;
+            border: 2px inset #fff;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], textarea {
+            width: 95%;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+
+        button {
+            background-color: #c0c0c0;
+            border: 2px solid;
+            border-color: #ffffff #808080 #808080 #ffffff;
+            font-weight: bold;
+            padding: 4px 10px;
+            cursor: pointer;
+        }
+
+        button:active {
+            border-color: #808080 #ffffff #ffffff #808080;
+        }
+
+        /* Log entries */
+        .entry {
+            border-bottom: 2px dashed #808080;
+            padding: 10px 0;
+        }
+
+        .entry-meta {
+            font-size: 12px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        a { color: blue; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="window">
+    <div class="title-bar">GUESTBOOK.EXE</div>
+    <div class="content">
+        <h2>Sign My Guestbook!</h2>
+        <p>Leave a message so I know you were here!</p>
+        
+        <!-- Sign Form -->
+        <form id="guestbookForm">
+            <label>Name / Handle:</label><br>
+            <input type="text" id="nameInput" required><br>
+            
+            <label>Your Message:</label><br>
+            <textarea id="messageInput" rows="3" required></textarea><br>
+            
+            <button type="submit">SUBMIT SIGNATURE</button>
+        </form>
+
+        <hr>
+
+        <h3>Past Visitors:</h3>
+        <div id="entriesContainer">
+            <!-- Messages will load here -->
+        </div>
+
+        <p style="text-align: center;"><a href="index.html">[ Back to Home ]</a></p>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('guestbookForm');
+    const container = document.getElementById('entriesContainer');
+
+    // Load existing entries from browser memory
+    function loadEntries() {
+        container.innerHTML = '';
+        const entries = JSON.parse(localStorage.getItem('retroGuestbook')) || [
+            { name: "SurferDude99", message: "Cool site! Love the background.", date: "10/24/1999" },
+            { name: "WebMaster_Flex", message: "Don't forget to check out my site too!", date: "02/14/2001" }
+        ];
+
+        entries.forEach(entry => {
+            const div = document.createElement('div');
+            div.className = 'entry';
+            div.innerHTML = `
+                <div class="entry-meta">From: ${escapeHTML(entry.name)} | Date: ${entry.date}</div>
+                <p>"${escapeHTML(entry.message)}"</p>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // Save a new entry
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('nameInput').value;
+        const message = document.getElementById('messageInput').value;
+        const date = new Date().toLocaleDateString();
+
+        const entries = JSON.parse(localStorage.getItem('retroGuestbook')) || [];
+        entries.unshift({ name, message, date }); // Add to the top of the list
+        
+        localStorage.setItem('retroGuestbook', JSON.stringify(entries));
+        
+        form.reset();
+        loadEntries();
+    });
+
+    // Helper to prevent code injection
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        );
+    }
+
+    // Initial load
+    loadEntries();
+</script>
+
+</body>
+</html>

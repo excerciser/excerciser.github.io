@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome to My Homepage</title>
+    <style>
+        body {
+            background-color: #008080; /* Classic Teal background */
+            font-family: "Times New Roman", Times, serif;
+            color: black;
+        }
+
+        /* The Windows 95 Gray Box */
+        .window {
+            background-color: #c0c0c0;
+            border: 2px solid;
+            border-color: #ffffff #808080 #808080 #ffffff;
+            width: 600px;
+            margin: 50px auto;
+            padding: 2px;
+        }
+
+        /* Title Bar */
+        .title-bar {
+            background: linear-gradient(90deg, #000080, #1084d0);
+            color: white;
+            padding: 3px 5px;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .content {
+            padding: 20px;
+            border: 1px solid #808080;
+            margin: 5px;
+            background-color: #c0c0c0;
+        }
+
+        /* Retro Sidebar Layout using Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td.sidebar {
+            width: 150px;
+            vertical-align: top;
+            border-right: 2px ridge #ffffff;
+            padding: 10px;
+        }
+
+        td.main {
+            padding: 20px;
+            vertical-align: top;
+            background-color: white;
+            border: 2px inset #ffffff;
+        }
+
+        marquee {
+            background-color: #ffff00;
+            border: 1px solid black;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        a {
+            color: blue;
+            font-weight: bold;
+        }
+
+        a:visited {
+            color: purple;
+        }
+    </style>
+</head>
+<body>
+
+<div class="window">
+    <div class="title-bar">
+        <span>My_First_Website.exe</span>
+        <span>X</span>
+    </div>
+
+    <marquee>*** WELCOME TO MY SITE - PLEASE SIGN MY GUESTBOOK ***</marquee>
+
+    <div class="content">
+        <table>
+            <tr>
+                <td class="sidebar">
+                    <p><a href="index.html">Home</a></p>
+                    <p><a href="about.html">About Me</a></p>
+                    <p><a href="game.html">Mini-Game</a></p>
+                    <p><a href="guestbook.html">Guestbook</a></p>
+                    <hr>
+                    <img src="https://web.archive.org/web/20091027005003im_/http://geocities.com/SiliconValley/Heights/9111/undercon.gif" width="100" alt="Under Construction">
+                </td>
+
+                <td class="main">
+                    <h1>Hello World!</h1>
+                    <p>Welcome to my corner of the internet. This site is optimized for <b>Netscape Navigator 4.0</b> and a screen resolution of 800x600.</p>
+                    
+                    <p>Things you will find here:</p>
+                    <ul>
+                        <li>Cool GIFs</li>
+                        <li>My thoughts</li>
+                        <li>A game I made</li>
+                    </ul>
+
+                    <center>
+                        <p>Visitor Count:</p>
+                        <img src="https://peters-web-corner.de/images/counter/counter1.gif" alt="Hit Counter">
+                    </center>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>
