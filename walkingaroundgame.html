@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scavenger RPG v1.0</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #00ff00; /* Classic Game Boy Matrix Green */
+            font-family: "Courier New", Courier, monospace;
+            padding: 20px;
+        }
+
+        .game-window {
+            background-color: #c0c0c0;
+            color: #000;
+            border: 4px outset #fff;
+            width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+            box-shadow: 5px 5px 0px #000;
+        }
+
+        .screen {
+            background-color: #8bac0f; /* Authentic Game Boy screen olive green */
+            color: #0f380f;
+            border: 3px inset #808080;
+            height: 200px;
+            padding: 15px;
+            overflow-y: auto;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background-color: #c0c0c0;
+            border: 2px outset #fff;
+            padding: 8px 15px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: monospace;
+            margin: 5px;
+        }
+
+        .btn:active {
+            border-style: inset;
+        }
+
+        .inventory-box, .crafting-box {
+            background-color: #fff;
+            border: 2px inset #808080;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        h3 { margin-top: 0; font-family: Arial, sans-serif; }
+    </style>
+</head>
+<body>
+
+<div class="game-window">
+    <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">💾 SCAVENGER.EXE</div>
+    
+    <div class="screen" id="gameScreen">
+        A wild world awaits... Click "EXPLORE" to search for items!
+    </div>
+
+    <center>
+        <button class="btn" onclick="explore()">🥾 EXPLORE</button>
+    </center>
+
+    <div class="inventory-box">
+        <h3>🎒 INVENTORY</h3>
+        <div id="inventoryList">Your bag is empty.</div>
+    </div>
+
+    <div class="crafting-box">
+        <h3>🔨 CRAFTING BENCH</h3>
+        <div id="craftingList"></div>
+    </div>
+
+    <p style="text-align: center; font-size: 12px;">
+        <a href="index.html" style="color: blue;">[ Back to Home ]</a>
+    </p>
+</div>
+
+<script>
+    // 1. The Loot Database
+    const LOOT_POOL = {
+        trash: ["Crushed Soda Can", "Old Receipt", "Bitten Apple Core", "Lint Ball"],
+        common: ["Rusty Screw", "Plastic Straw", "AA Battery", "Rubber Band", "Copper Wire"],
+        rare: ["Cracked Phone Screen", "Vintage Postcard", "Shiny Marble", "Old Key"],
+        ultra_rare: ["Broken Game Boy", "Glowing Crystal", "Pre-War Coin"],
+        one_of_a_kind: ["The Golden Microchip", "Ancient Cyber-Artifact"]
+    };
+
+    // 2. Crafting Recipes (Requires: item name: quantity)
+    const RECIPES = [
+        { 
+            result: "Retro Cyber-Deck (RARE)", 
+            requires: { "Broken Game Boy": 1, "Copper Wire": 2, "AA Battery": 1 } 
+        },
+        { 
+            result: "Improvised Laser Pointer (ULTRA RARE)", 
+            requires: { "Glowing Crystal": 1, "AA Battery": 2, "Rusty Screw": 1 } 
+        }
+    ];
+
+    let inventory = {};
+
+    const screen = document.getElementById("gameScreen");
+    const invList = document.getElementById("inventoryList");
+    const craftList = document.getElementById("craftingList");
+
+    // 3. Explore Logic (The Encounter Wheel)
+    function explore() {
+        let rand = Math.random() * 100;
+        let rarity = "";
+        let color = "";
+
+        if (rand < 40) { rarity = "trash"; color = "#666"; }
+        else if (rand < 75) { rarity = "common"; color = "#000"; }
+        else if (rand < 92) { rarity = "rare"; color = "blue"; }
+        else if (rand < 99) { rarity = "ultra_rare"; color = "purple"; }
+        else { rarity = "one_of_a_kind"; color = "red"; }
+
+        const items = LOOT_POOL[rarity];
+        const foundItem = items[Math.floor(Math.random() * items.length)];
+
+        // Add to Inventory data
+        inventory[foundItem] = (inventory[foundItem] || 0) + 1;
+
+        // Update Screen Text
+        screen.innerHTML = `
+            💥 A wild encounter!<br><br>
+            You searched the area and picked up:<br>
+            <span style="color: ${color}; font-size: 18px;">▶ ${foundItem} (${rarity.toUpperCase().replace('_', ' ')})</span>
+        `;
+        screen.scrollTop = screen.scrollHeight;
+
+        updateInventoryUI();
+    }
+
+    // 4. Update Inventory Layout
+    function updateInventoryUI() {
+        if (Object.keys(inventory).length === 0) {
+            invList.innerHTML = "Your bag is empty.";
+            return;
+        }
+
+        invList.innerHTML = Object.keys(inventory)
+            .map(item => `📦 <b>${item}</b> x${inventory[item]}`)
+            .join("<br>");
+
+        updateCraftingUI();
+    }
+
+    // 5. Update Crafting List Display
+    function updateCraftingUI() {
+        craftList.innerHTML = RECIPES.map((recipe, index) => {
+            let requirementsMet = true;
+            let reqText = Object.keys(recipe.requires).map(reqItem => {
+                let count = inventory[reqItem] || 0;
+                let needed = recipe.requires[reqItem];
+                if (count < needed) requirementsMet = false;
+                return `${reqItem} (${count}/${needed})`;
+            }).join(", ");
+
+            let button = requirementsMet 
+                ? `<button class="btn" onclick="craftItem(${index})">CRAFT</button>` 
+                : `<button class="btn" disabled style="opacity:0.5;">LACK MATERIALS</button>`;
+
+            return `<div><strong>${recipe.result}</strong><br>Requires: ${reqText}<br>${button}</div><hr>`;
+        }).join("");
+    }
+
+    // 6. Execute Crafting
+    function craftItem(recipeIndex) {
+        const recipe = RECIPES[recipeIndex];
+        
+        // Deduct materials
+        Object.keys(recipe.requires).forEach(reqItem => {
+            inventory[reqItem] -= recipe.requires[reqItem];
+            if (inventory[reqItem] === 0) delete inventory[reqItem];
+        });
+
+        // Add crafted item
+        inventory[recipe.result] = (inventory[recipe.result] || 0) + 1;
+
+        screen.innerHTML = `🛠️ SUCCESS!<br><br>You used your workbench to construct:<br><span style="color: darkgreen; font-size: 18px;">✨ ${recipe.result} ✨</span>`;
+        
+        updateInventoryUI();
+    }
+
+    // Initialize layout
+    updateCraftingUI();
+</script>
+
+</body>
+</html>
