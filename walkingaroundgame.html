@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Walking Around RPG v2.0</title>
+    <title>Walking Around RPG</title>
     <style>
         body {
             background-color: #000;
             color: #00ff00; 
             font-family: "Courier New", Courier, monospace;
-            padding: 10px;
+            padding: 5px;
             text-align: center;
         }
 
@@ -15,338 +15,327 @@
             background-color: #c0c0c0;
             color: #000;
             border: 4px outset #fff;
-            width: 780px;
+            width: 820px;
             margin: 0 auto;
             padding: 10px;
             box-shadow: 5px 5px 0px #000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
 
-        .header {
+        .header { font-weight: bold; font-size: 14px; margin-bottom: 5px; text-align: left; }
+        .main-layout { display: flex; gap: 15px; width: 100%; }
+
+        /* Survival Stats HUD */
+        .hud-bar {
             width: 100%;
+            background: #808080;
+            border: 2px inset #fff;
+            padding: 5px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-around;
+            font-size: 11px;
             font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 5px;
-            text-align: left;
         }
+        .stat-fill { background: #00ff00; height: 10px; display: inline-block; border: 1px solid #000; }
 
-        .main-layout {
-            display: flex;
-            gap: 15px;
-            width: 100%;
-        }
-
-        /* Left Side: Visual World Map */
-        canvas {
-            background-color: #8bac0f; /* Authentic Game Boy Green */
-            border: 4px inset #808080;
-            display: block;
-        }
-
-        /* Right Side: Text Log, Inventory, & Crafting Dashboard */
-        .dashboard {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            height: 408px;
-        }
+        canvas { background-color: #8bac0f; border: 4px inset #808080; display: block; }
+        .dashboard { flex: 1; display: flex; flex-direction: column; gap: 8px; height: 408px; }
 
         .screen {
-            background-color: #8bac0f; 
-            color: #0f380f;
-            border: 3px inset #808080;
-            height: 100px;
-            padding: 10px;
-            overflow-y: auto;
-            font-weight: bold;
-            text-align: left;
-            font-size: 13px;
+            background-color: #8bac0f; color: #0f380f; border: 3px inset #808080;
+            height: 110px; padding: 10px; overflow-y: auto; font-weight: bold; text-align: left; font-size: 12px;
         }
 
-        .audio-deck {
-            background: #a0a0a0;
-            border: 2px inset #fff;
-            padding: 4px;
-            font-size: 11px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .inventory-box, .crafting-box {
-            background-color: #fff;
-            border: 2px inset #808080;
-            padding: 8px;
-            overflow-y: auto;
-            text-align: left;
-        }
-        
+        .inventory-box, .crafting-box { background-color: #fff; border: 2px inset #808080; padding: 8px; overflow-y: auto; text-align: left; }
         .inventory-box { height: 90px; }
-        .crafting-box { height: 110px; }
+        .crafting-box { height: 120px; }
 
-        .btn {
-            background-color: #c0c0c0;
-            border: 2px outset #fff;
-            padding: 4px 10px;
-            font-weight: bold;
-            cursor: pointer;
-            font-family: monospace;
-            font-size: 11px;
-        }
+        .btn { background-color: #c0c0c0; border: 2px outset #fff; padding: 3px 8px; font-weight: bold; cursor: pointer; font-family: monospace; font-size: 11px; }
         .btn:active { border-style: inset; }
-
-        h3 { margin: 0 0 5px 0; font-family: Arial, sans-serif; font-size: 14px; }
-        hr { border: 1px dashed #808080; margin: 5px 0; }
+        h3 { margin: 0 0 3px 0; font-family: Arial, sans-serif; font-size: 13px; }
+        hr { border: 1px dashed #808080; margin: 4px 0; }
         a { color: blue; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="game-window">
-    <div class="header">💾 WALKING_AROUND_RPG.EXE</div>
+    <div class="header">💾 WALKING_AROUND_RPG_SURVIVAL.EXE</div>
+    
+    <!-- SURVIVAL STATUS BAR -->
+    <div class="hud-bar">
+        <span>📍 ZONE: <span id="zoneName" style="color: blue;">FOREST WILDERNESS</span></span>
+        <span>❤️ HP: <div id="hpFill" class="stat-fill" style="width: 50px; background: red;"></div></span>
+        <span>🍗 HUNGER: <div id="hungerFill" class="stat-fill" style="width: 50px; background: orange;"></div></span>
+        <span>💧 THIRST: <div id="thirstFill" class="stat-fill" style="width: 50px; background: deepskyblue;"></div></span>
+    </div>
     
     <div class="main-layout">
+        <!-- LEFT: MAP -->
         <div>
             <canvas id="worldCanvas" width="400" height="400"></canvas>
-            <div style="font-size: 11px; margin-top: 4px; font-weight: bold;">[ Use Arrow Keys / WASD to Walk ]</div>
+            <div style="font-size: 11px; margin-top: 4px; font-weight: bold;">[ Move past borders to travel to new zones! ]</div>
         </div>
 
+        <!-- RIGHT: DATA CONTROLLERS -->
         <div class="dashboard">
-            <div class="audio-deck">
-                <span>📻 MUSIC GENERATOR:</span>
-                <div>
-                    <button class="btn" onclick="toggleMusic()">🎵 BGM</button>
-                    <span id="bgmStatus" style="font-weight:bold; color:red;">OFF</span>
-                </div>
-            </div>
-
             <div class="screen" id="gameScreen">
-                Welcome! Move your character into the dark textured grass patches to scavenge for items.
+                WARNING: Nature is dangerous. Collect resources to craft food, water purifiers, and defenses. Watch your vitals!
             </div>
 
             <div class="inventory-box">
-                <h3>🎒 INVENTORY</h3>
+                <h3>🎒 INVENTORY (Click Food/Water to Consume)</h3>
                 <div id="inventoryList">Your bag is empty.</div>
             </div>
 
             <div class="crafting-box">
-                <h3>🔨 CRAFTING BENCH</h3>
+                <h3>🔨 SURVIVAL CRAFTING WORKBENCH</h3>
                 <div id="craftingList"></div>
             </div>
         </div>
     </div>
 
-    <p style="font-size: 12px; margin: 10px 0 0 0;">
-        <a href="index.html">[ Back to Home ]</a>
-    </p>
+    <p style="font-size: 12px; margin: 8px 0 0 0;"><a href="index.html">[ Back to Home ]</a></p>
 </div>
 
 <script>
-    // --- MAP ENGINE CONSTANTS ---
     const canvas = document.getElementById("worldCanvas");
     const ctx = canvas.getContext("2d");
-    const TILE_SIZE = 40; // 40x40 pixel grid tiles (10x10 map size)
-    
-    // 0 = Walkable Open Ground, 1 = Solid Wall (Trees), 2 = Tall Grass (Scavenge Zone)
-    const MAP = [
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 0, 0, 0, 0, 1, 2, 2, 2, 1],
-        [1, 0, 0, 0, 0, 1, 2, 2, 2, 1],
-        [1, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-        [1, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 1, 1, 0, 0, 1],
-        [1, 2, 2, 2, 0, 1, 1, 0, 0, 1],
-        [1, 2, 2, 2, 0, 0, 0, 0, 0, 1],
-        [1, 2, 2, 2, 0, 0, 0, 0, 0, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    ];
+    const TILE_SIZE = 40;
+    const GRID_COUNT = 10;
 
-    let player = { x: 2, y: 2 }; // Spawn location index on the grid
+    // --- CORE SURVIVAL STATS ---
+    let stats = { hp: 100, hunger: 100, thirst: 100 };
+    let player = { x: 5, y: 5 };
+    let currentBiome = "FOREST"; // Options: FOREST, CITY, ABANDONED_RUINS
 
-    // --- AUDIO SYSTEM LAYER ---
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    let bgmTimeout = null; let isMusicPlaying = false;
-    const SCALE = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00];
-    const RHYTHMS = [200, 400, 800];
+    // --- PROCEDURAL GENERATOR LAYER ---
+    let MAP = [];
+    function generateNewZone(biome) {
+        currentBiome = biome;
+        document.getElementById("zoneName").innerText = biome.replace("_", " ");
+        MAP = [];
+        
+        for (let r = 0; r < GRID_COUNT; r++) {
+            let row = [];
+            for (let c = 0; c < GRID_COUNT; c++) {
+                // Ensure a clear center track so players don't spawn stuck in structures
+                if (r > 3 && r < 7 && c > 3 && c < 7) { row.push(0); continue; }
 
-    function playTone(freq, type, duration, startTime = 0) {
-        const osc = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
-        gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime + startTime); 
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startTime + duration);
-        osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-        osc.start(audioCtx.currentTime + startTime); osc.stop(audioCtx.currentTime + startTime + duration);
+                let rand = Math.random();
+                if (biome === "FOREST") {
+                    if (rand < 0.15) row.push(1); // Trees
+                    else if (rand < 0.45) row.push(2); // Tall Grass (Loot)
+                    else row.push(0);
+                } else if (biome === "CITY") {
+                    if (rand < 0.12) row.push(3); // Solid Wall Structure
+                    else if (rand < 0.35) row.push(4); // Trash Cans (Loot)
+                    else row.push(0);
+                } else if (biome === "ABANDONED_RUINS") {
+                    if (rand < 0.20) row.push(5); // Broken Debris Obstacle
+                    else if (rand < 0.45) row.push(6); // Scrap Piles (Loot)
+                    else row.push(0);
+                }
+            }
+            MAP.push(row);
+        }
     }
 
-    function playStepSound() { playTone(120, 'triangle', 0.03); }
-    function playTrashSound() { playTone(70, 'sawtooth', 0.15); }
-    function playRareSound() {
-        playTone(523.25, 'square', 0.08); playTone(659.25, 'square', 0.08, 0.08); playTone(783.99, 'square', 0.15, 0.16); 
-    }
-    function playCraftSound() {
-        playTone(440, 'square', 0.06); playTone(880, 'square', 0.06, 0.06); playTone(1200, 'square', 0.12, 0.12);
-    }
-
-    function playGenerativeBGM() {
-        if (!isMusicPlaying) return;
-        const randomNote = SCALE[Math.floor(Math.random() * SCALE.length)];
-        const randomDurationMs = RHYTHMS[Math.floor(Math.random() * RHYTHMS.length)];
-        playTone(randomNote, 'triangle', randomDurationMs / 1000);
-        bgmTimeout = setTimeout(playGenerativeBGM, randomDurationMs);
-    }
-
-    function toggleMusic() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        isMusicPlaying = !isMusicPlaying;
-        const status = document.getElementById("bgmStatus");
-        if (isMusicPlaying) { status.innerHTML = "ON"; status.style.color = "green"; playGenerativeBGM(); }
-        else { status.innerHTML = "OFF"; status.style.color = "red"; clearTimeout(bgmTimeout); }
-    }
-
-    // --- GAME ENGINE LAYER ---
-    const LOOT_POOL = {
-        trash: ["Crushed Soda Can", "Old Receipt", "Bitten Apple Core", "Lint Ball"],
-        common: ["Rusty Screw", "Plastic Straw", "AA Battery", "Rubber Band", "Copper Wire"],
-        rare: ["Cracked Phone Screen", "Vintage Postcard", "Shiny Marble", "Old Key"],
-        ultra_rare: ["Broken Game Boy", "Glowing Crystal", "Pre-War Coin"],
-        one_of_a_kind: ["The Golden Microchip", "Ancient Cyber-Artifact"]
+    // --- ENGINE SPECIFIC LOOT LOOPS ---
+    const LOOT_POOLS = {
+        "FOREST": ["Wild Berries", "Muddy Water", "Tree Branch", "Sharp Flint"],
+        "CITY": ["Stale Crust", "Discarded Soda Can", "Rusty Screw", "Copper Wire"],
+        "ABANDONED_RUINS": ["Canned Beans", "Old Battery", "Metal Plate", "Cloth Rag"]
     };
 
     const RECIPES = [
-        { result: "Retro Cyber-Deck (RARE)", requires: { "Broken Game Boy": 1, "Copper Wire": 2, "AA Battery": 1 } },
-        { result: "Improvised Laser Pointer (ULTRA RARE)", requires: { "Glowing Crystal": 1, "AA Battery": 2, "Rusty Screw": 1 } }
+        { result: "Purified Water Bottle", requires: { "Muddy Water": 1, "Discarded Soda Can": 1 }, type: "useable" },
+        { result: "Cooked Trail-Mix", requires: { "Wild Berries": 2, "Stale Crust": 1 }, type: "useable" },
+        { result: "Makeshift Spear (DEFENSE)", requires: { "Tree Branch": 1, "Sharp Flint": 1 }, type: "weapon" },
+        { result: "Splint & Bandage", requires: { "Cloth Rag": 2, "Tree Branch": 1 }, type: "useable" }
     ];
 
-    let inventory = {};
+    let inventory = { "Wild Berries": 1, "Muddy Water": 1 }; // Starter Kit
     const screen = document.getElementById("gameScreen");
-    const invList = document.getElementById("inventoryList");
-    const craftList = document.getElementById("craftingList");
 
-    // Render the Map and Character
+    // --- VISUAL RENDERING PIPELINE (Humanoid Graphics) ---
     function drawWorld() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        for (let r = 0; r < MAP.length; r++) {
-            for (let c = 0; c < MAP[r].length; c++) {
-                if (MAP[r][c] === 1) {
-                    ctx.fillStyle = "#0f380f"; // Solid Wall Block (Tree/Border)
-                    ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = "#8bac0f";
-                    ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                } else if (MAP[r][c] === 2) {
-                    ctx.fillStyle = "#306230"; // Tall Grass Tile
-                    ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    // Add simple grass cross-hatch lines
-                    ctx.fillStyle = "#0f380f";
-                    ctx.fillRect(c * TILE_SIZE + 10, r * TILE_SIZE + 10, 4, 20);
-                    ctx.fillRect(c * TILE_SIZE + 25, r * TILE_SIZE + 8, 4, 24);
-                } else {
-                    ctx.fillStyle = "#9bbc0f"; // Open Floor Tile
-                    ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                }
+        for (let r = 0; r < GRID_COUNT; r++) {
+            for (let c = 0; c < GRID_COUNT; c++) {
+                let tile = MAP[r][c];
+                if (tile === 1) { ctx.fillStyle = "#1b4d3e"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // Tree
+                else if (tile === 2) { ctx.fillStyle = "#556b2f"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // Grass
+                else if (tile === 3) { ctx.fillStyle = "#4a4a4a"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // City Concrete Wall
+                else if (tile === 4) { ctx.fillStyle = "#708090"; ctx.fillRect(c*TILE_SIZE+10, r*TILE_SIZE+10, 20, 25); } // Trash Can
+                else if (tile === 5) { ctx.fillStyle = "#3e2723"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // Ruins Debris
+                else if (tile === 6) { ctx.fillStyle = "#b8860b"; ctx.fillRect(c*TILE_SIZE+5, r*TILE_SIZE+15, 30, 15); } // Scrap Piles
+                else { ctx.fillStyle = "#8bac0f"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // Open Dirt
+                
+                // Grid borders
+                ctx.strokeStyle = "rgba(15,56,15,0.15)";
+                ctx.strokeRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
         }
 
-        // Draw Player Character (Classic Box Sprite)
-        ctx.fillStyle = "#0f380f";
-        ctx.fillRect(player.x * TILE_SIZE + 8, player.y * TILE_SIZE + 4, TILE_SIZE - 16, TILE_SIZE - 8);
-        // Character eyes
-        ctx.fillStyle = "#9bbc0f";
-        ctx.fillRect(player.x * TILE_SIZE + 12, player.y * TILE_SIZE + 12, 4, 6);
-        ctx.fillRect(player.x * TILE_SIZE + 24, player.y * TILE_SIZE + 12, 4, 6);
+        // DRAW HUMANOID SPRITE (Head, Torso, Blue Jeans Layout)
+        let px = player.x * TILE_SIZE + 20;
+        let py = player.y * TILE_SIZE + 20;
+
+        ctx.fillStyle = "#d2b48c"; // Skin Tone Head
+        ctx.fillRect(px - 6, py - 16, 12, 10);
+        ctx.fillStyle = "#000"; // Eyes
+        ctx.fillRect(px - 4, py - 12, 2, 2); ctx.fillRect(px + 2, py - 12, 2, 2);
+        
+        ctx.fillStyle = "#ff0000"; // Red Shirt Torso
+        ctx.fillRect(px - 8, py - 6, 16, 14);
+        
+        ctx.fillStyle = "#0000ff"; // Blue Jeans Legs
+        ctx.fillRect(px - 7, py + 8, 5, 10); ctx.fillRect(px + 2, py + 8, 5, 10);
     }
 
-    // Input Controller
+    // --- STAT TICK LOGIC ---
+    setInterval(() => {
+        stats.hunger = Math.max(0, stats.hunger - 1);
+        stats.thirst = Math.max(0, stats.thirst - 1.5);
+        
+        if (stats.hunger === 0 || stats.thirst === 0) {
+            stats.hp = Math.max(0, stats.hp - 3);
+            screen.innerHTML = `<span style="color:red;">⚠️ STARVING / DEHYDRATED! Losing health!</span>`;
+        }
+        
+        if (stats.hp <= 0) {
+            alert("GAME OVER! You collapsed in the wasteland.");
+            stats = { hp: 100, hunger: 100, thirst: 100 };
+            inventory = {};
+            generateNewZone("FOREST");
+            player = { x: 5, y: 5 };
+        }
+        updateHUD();
+    }, 4000);
+
+    function updateHUD() {
+        document.getElementById("hpFill").style.width = (stats.hp * 0.8) + "px";
+        document.getElementById("hungerFill").style.width = (stats.hunger * 0.8) + "px";
+        document.getElementById("thirstFill").style.width = (stats.thirst * 0.8) + "px";
+    }
+
+    // --- CONTROLLER WITH SCROLLING INTER-ZONE BORDERS ---
     function handleInput(e) {
         let key = e.key.toLowerCase();
-        let targetX = player.x;
-        let targetY = player.y;
+        let targetX = player.x; let targetY = player.y;
 
         if (key === "arrowup" || key === "w") targetY--;
         if (key === "arrowdown" || key === "s") targetY++;
         if (key === "arrowleft" || key === "a") targetX--;
         if (key === "arrowright" || key === "d") targetX++;
 
-        // Collision Check: Only move if destination tile isn't a solid structure (1)
-        if (MAP[targetY] && MAP[targetY][targetX] !== 1) {
-            player.x = targetX;
-            player.y = targetY;
-            playStepSound();
+        // CROSS BORDERS SYSTEM (Bigger World Map simulation)
+        if (targetX < 0) { generateNewZone(pickNextBiome()); player.x = 9; return drawWorld(); }
+        if (targetX > 9) { generateNewZone(pickNextBiome()); player.x = 0; return drawWorld(); }
+        if (targetY < 0) { generateNewZone(pickNextBiome()); player.y = 9; return drawWorld(); }
+        if (targetY > 9) { generateNewZone(pickNextBiome()); player.y = 0; return drawWorld(); }
+
+        // Block movement into trees(1), buildings(3), and ruins walls(5)
+        let nextTile = MAP[targetY][targetX];
+        if (nextTile !== 1 && nextTile !== 3 && nextTile !== 5) {
+            player.x = targetX; player.y = targetY;
             
-            // Encounter Check: If player lands in Tall Grass (2)
-            if (MAP[player.y][player.x] === 2) {
-                checkEncounter();
+            // Check for gathering loops (Grass, Trash Cans, Scrap Piles)
+            if (nextTile === 2 || nextTile === 4 || nextTile === 6) {
+                checkGatherEvent();
             }
-            
+            // Trigger rare wild animal dangers
+            if (currentBiome === "FOREST" && Math.random() < 0.04) {
+                triggerAnimalAttack();
+            }
             drawWorld();
         }
     }
 
-    // Hidden Calculation Wheel for Items
-    function checkEncounter() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        
-        // 25% chance to hook an item per step inside the tall grass
-        if (Math.random() < 0.25) {
-            let rand = Math.random() * 100;
-            let rarity = ""; let color = "";
+    function pickNextBiome() {
+        const biomes = ["FOREST", "CITY", "ABANDONED_RUINS"];
+        let available = biomes.filter(b => b !== currentBiome);
+        return available[Math.floor(Math.random() * available.length)];
+    }
 
-            if (rand < 40) { rarity = "trash"; color = "#444"; playTrashSound(); }
-            else if (rand < 75) { rarity = "common"; color = "#000"; playStepSound(); }
-            else if (rand < 92) { rarity = "rare"; color = "blue"; playRareSound(); }
-            else if (rand < 99) { rarity = "ultra_rare"; color = "purple"; playRareSound(); }
-            else { rarity = "one_of_a_kind"; color = "red"; playRareSound(); }
-
-            const items = LOOT_POOL[rarity];
-            const foundItem = items[Math.floor(Math.random() * items.length)];
-            inventory[foundItem] = (inventory[foundItem] || 0) + 1;
-
-            screen.innerHTML = `❗ Found something!<br>You rummaged through the grass brush and found:<br><span style="color: ${color}; font-size: 14px;">▶ ${foundItem} (${rarity.toUpperCase()})</span>`;
-            screen.scrollTop = screen.scrollHeight;
+    // --- ENCOUNTER CALCULATORS ---
+    function checkGatherEvent() {
+        if (Math.random() < 0.40) { // 40% chance inside search nodes
+            let list = LOOT_POOLS[currentBiome];
+            let item = list[Math.floor(Math.random() * list.length)];
+            inventory[item] = (inventory[item] || 0) + 1;
+            screen.innerHTML = `🎒 Looted item: <span style="color:black;">[${item}]</span> added to inventory.`;
             updateInventoryUI();
         }
     }
 
+    function triggerAnimalAttack() {
+        let hasWeapon = inventory["Makeshift Spear (DEFENSE)"] > 0;
+        if (hasWeapon) {
+            screen.innerHTML = `<span style="color:darkgreen;">🐺 A Wild Wolf attacked! You fended it off using your Makeshift Spear!</span>`;
+        } else {
+            stats.hp = Math.max(0, stats.hp - 25);
+            screen.innerHTML = `<span style="color:darkred;">🐺 A Wild Wolf ambushed you out of the brush! You sustained -25 HP!</span>`;
+            updateHUD();
+        }
+    }
+
+    // --- CONSUMPTION CORE ENGINE ---
+    window.useItem = function(item) {
+        if (!inventory[item]) return;
+        
+        if (item === "Wild Berries") { stats.hunger = Math.min(100, stats.hunger + 15); stats.hp = Math.min(100, stats.hp + 2); }
+        else if (item === "Muddy Water") { stats.thirst = Math.min(100, stats.thirst + 20); stats.hp = Math.max(0, stats.hp - 10); screen.innerHTML = "🤢 The Muddy Water quenched thirst but made you sick (-10 HP)!"; }
+        else if (item === "Purified Water Bottle") { stats.thirst = Math.min(100, stats.thirst + 50); }
+        else if (item === "Cooked Trail-Mix" || item === "Canned Beans") { stats.hunger = Math.min(100, stats.hunger + 45); }
+        else if (item === "Splint & Bandage") { stats.hp = Math.min(100, stats.hp + 40); }
+        else { return; } // Not edible/usable item
+
+        inventory[item]--;
+        if (inventory[item] === 0) delete inventory[item];
+        updateInventoryUI();
+        updateHUD();
+    };
+
     function updateInventoryUI() {
-        if (Object.keys(inventory).length === 0) { invList.innerHTML = "Your bag is empty."; return; }
-        invList.innerHTML = Object.keys(inventory).map(item => `📦 <b>${item}</b> x${inventory[item]}`).join("<br>");
+        if (Object.keys(inventory).length === 0) { document.getElementById("inventoryList").innerHTML = "Empty bag."; return; }
+        document.getElementById("inventoryList").innerHTML = Object.keys(inventory).map(item => {
+            const clickAction = ["Wild Berries","Muddy Water","Purified Water Bottle","Cooked Trail-Mix","Canned Beans","Splint & Bandage"].includes(item)
+                ? `style="color:darkred; cursor:pointer;" onclick="useItem('${item}')"` 
+                : ``;
+            return `📦 <span ${clickAction}><b>${item}</b> x${inventory[item]}</span>`;
+        }).join("<br>");
         updateCraftingUI();
     }
 
     function updateCraftingUI() {
-        craftList.innerHTML = RECIPES.map((recipe, index) => {
-            let requirementsMet = true;
-            let reqText = Object.keys(recipe.requires).map(reqItem => {
-                let count = inventory[reqItem] || 0;
-                let needed = recipe.requires[reqItem];
-                if (count < needed) requirementsMet = false;
-                return `${reqItem} (${count}/${needed})`;
+        document.getElementById("craftingList").innerHTML = RECIPES.map((recipe, index) => {
+            let met = true;
+            let reqs = Object.keys(recipe.requires).map(r => {
+                let current = inventory[r] || 0;
+                if (current < recipe.requires[r]) met = false;
+                return `${r} (${current}/${recipe.requires[r]})`;
             }).join(", ");
-            let button = requirementsMet ? `<button class="btn" onclick="craftItem(${index})">CRAFT</button>` : `<button class="btn" disabled style="opacity:0.5;">LACK MATERIALS</button>`;
-            return `<div><strong>${recipe.result}</strong><br>Reqs: ${reqText}<br>${button}</div><hr>`;
+            let btn = met ? `<button class="btn" onclick="craftItem(${index})">CRAFT</button>` : `<button class="btn" disabled style="opacity:0.4;">LACK RESOURCE</button>`;
+            return `<div><strong>${recipe.result}</strong><br>Needs: ${reqs}<br>${btn}</div><hr>`;
         }).join("");
     }
 
-    function craftItem(recipeIndex) {
-        playCraftSound();
-        const recipe = RECIPES[recipeIndex];
-        Object.keys(recipe.requires).forEach(reqItem => {
-            inventory[reqItem] -= recipe.requires[reqItem];
-            if (inventory[reqItem] === 0) delete inventory[reqItem];
-        });
-        inventory[recipe.result] = (inventory[recipe.result] || 0) + 1;
-        screen.innerHTML = `🛠️ CRAFTED!<br>You built:<br><span style="color: darkgreen;">✨ ${recipe.result} ✨</span>`;
+    function craftItem(index) {
+        const r = RECIPES[index];
+        Object.keys(r.requires).forEach(item => { inventory[item] -= r.requires[item]; if(inventory[item]===0) delete inventory[item]; });
+        inventory[r.result] = (inventory[r.result] || 0) + 1;
+        screen.innerHTML = `🛠️ Fabricated: ${r.result}`;
         updateInventoryUI();
     }
 
-    // Initialize Game Setup
+    // --- BOOT RUNNER ---
     window.addEventListener("keydown", handleInput);
-    drawWorld();
-    updateCraftingUI();
+    generateNewZone("FOREST");
+    updateInventoryUI();
+    updateHUD();
 </script>
 
 </body>
