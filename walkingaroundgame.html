@@ -46,6 +46,17 @@
             height: 110px; padding: 10px; overflow-y: auto; font-weight: bold; text-align: left; font-size: 12px;
         }
 
+        .audio-deck {
+            background: #a0a0a0;
+            border: 2px inset #fff;
+            padding: 4px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+
         .inventory-box, .crafting-box { background-color: #fff; border: 2px inset #808080; padding: 8px; overflow-y: auto; text-align: left; }
         .inventory-box { height: 90px; }
         .crafting-box { height: 120px; }
@@ -59,8 +70,16 @@
 </head>
 <body>
 
+<!-- AUDIO GATE POPUP -->
+<div id="audioGate" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #00ff00; font-family: monospace; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold;">
+    <h2>WALKING AROUND RPG v3.2</h2>
+    <p>Loading Generative Sound Drivers...</p>
+    <br>
+    <button class="btn" style="padding: 15px 30px; font-size: 16px; color: black; background: #c0c0c0; border: 4px outset #fff;" onclick="initializeAudioEngine()">🔌 CLICK TO BOOT GAME & SOUNDS</button>
+</div>
+
 <div class="game-window">
-    <div class="header">💾 WALKING_AROUND_RPG_SURVIVAL.EXE</div>
+    <div class="header">💾 WALKING_AROUND_RPG_FINAL.EXE</div>
     
     <!-- SURVIVAL STATUS BAR -->
     <div class="hud-bar">
@@ -79,6 +98,15 @@
 
         <!-- RIGHT: DATA CONTROLLERS -->
         <div class="dashboard">
+            <!-- RESTORED AUDIO DECK CONTROLLER -->
+            <div class="audio-deck">
+                <span>📻 GENERATIVE SOUND DECK:</span>
+                <div>
+                    <button class="btn" onclick="toggleMusic()">🎵 Toggle BGM</button>
+                    <span id="bgmStatus" style="font-weight:bold; color:red;">OFF</span>
+                </div>
+            </div>
+
             <div class="screen" id="gameScreen">
                 WARNING: Nature is dangerous. Collect resources to craft food, water purifiers, and defenses. Watch your vitals!
             </div>
@@ -107,7 +135,81 @@
     // --- CORE SURVIVAL STATS ---
     let stats = { hp: 100, hunger: 100, thirst: 100 };
     let player = { x: 5, y: 5 };
-    let currentBiome = "FOREST"; // Options: FOREST, CITY, ABANDONED_RUINS
+    let currentBiome = "FOREST"; 
+
+    // --- RESTORED GENERATIVE AUDIO ENGINE LAYER ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let bgmTimeout = null; 
+    let isMusicPlaying = false;
+
+    // A Minor Pentatonic Scale
+    const SCALE = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00];
+    const RHYTHMS = [200, 400, 800];
+
+    function playTone(freq, type, duration, startTime = 0) {
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.type = type; 
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+        gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime + startTime); 
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startTime + duration);
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.start(audioCtx.currentTime + startTime);
+        osc.stop(audioCtx.currentTime + startTime + duration);
+    }
+
+    // Dynamic Context Sounds
+    function playStepSound() { playTone(120, 'triangle', 0.03); }
+    function playTrashSound() { playTone(70, 'sawtooth', 0.15); }
+    function playCraftSound() {
+        playTone(440, 'square', 0.06); playTone(880, 'square', 0.06, 0.06); playTone(1200, 'square', 0.12, 0.12);
+    }
+    function playRareSound() {
+        playTone(523.25, 'square', 0.08); playTone(659.25, 'square', 0.08, 0.08); playTone(783.99, 'square', 0.15, 0.16); 
+    }
+
+    function playGenerativeBGM() {
+        if (!isMusicPlaying) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const randomNote = SCALE[Math.floor(Math.random() * SCALE.length)];
+        const randomDurationMs = RHYTHMS[Math.floor(Math.random() * RHYTHMS.length)];
+        const durationSeconds = randomDurationMs / 1000;
+
+        playTone(randomNote, 'triangle', durationSeconds);
+        bgmTimeout = setTimeout(playGenerativeBGM, randomDurationMs);
+    }
+
+    function initializeAudioEngine() {
+        audioCtx.resume().then(() => {
+            document.getElementById("audioGate").style.display = "none";
+            isMusicPlaying = true;
+            const status = document.getElementById("bgmStatus");
+            status.innerHTML = "ON";
+            status.style.color = "green";
+            playGenerativeBGM();
+        });
+    }
+
+    function toggleMusic() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        isMusicPlaying = !isMusicPlaying;
+        const status = document.getElementById("bgmStatus");
+        
+        if (isMusicPlaying) {
+            status.innerHTML = "ON";
+            status.style.color = "green";
+            playGenerativeBGM();
+        } else {
+            status.innerHTML = "OFF";
+            status.style.color = "red";
+            clearTimeout(bgmTimeout);
+        }
+    }
 
     // --- PROCEDURAL GENERATOR LAYER ---
     let MAP = [];
@@ -119,21 +221,20 @@
         for (let r = 0; r < GRID_COUNT; r++) {
             let row = [];
             for (let c = 0; c < GRID_COUNT; c++) {
-                // Ensure a clear center track so players don't spawn stuck in structures
                 if (r > 3 && r < 7 && c > 3 && c < 7) { row.push(0); continue; }
 
                 let rand = Math.random();
                 if (biome === "FOREST") {
                     if (rand < 0.15) row.push(1); // Trees
-                    else if (rand < 0.45) row.push(2); // Tall Grass (Loot)
+                    else if (rand < 0.45) row.push(2); // Tall Grass
                     else row.push(0);
                 } else if (biome === "CITY") {
-                    if (rand < 0.12) row.push(3); // Solid Wall Structure
-                    else if (rand < 0.35) row.push(4); // Trash Cans (Loot)
+                    if (rand < 0.12) row.push(3); // Solid Concrete Walls
+                    else if (rand < 0.35) row.push(4); // Trash Cans
                     else row.push(0);
                 } else if (biome === "ABANDONED_RUINS") {
-                    if (rand < 0.20) row.push(5); // Broken Debris Obstacle
-                    else if (rand < 0.45) row.push(6); // Scrap Piles (Loot)
+                    if (rand < 0.20) row.push(5); // Rubble Blocks
+                    else if (rand < 0.45) row.push(6); // Scrap Piles
                     else row.push(0);
                 }
             }
@@ -141,7 +242,7 @@
         }
     }
 
-    // --- ENGINE SPECIFIC LOOT LOOPS ---
+    // --- ENGINE LOOT & GATHER DATA ---
     const LOOT_POOLS = {
         "FOREST": ["Wild Berries", "Muddy Water", "Tree Branch", "Sharp Flint"],
         "CITY": ["Stale Crust", "Discarded Soda Can", "Rusty Screw", "Copper Wire"],
@@ -155,43 +256,42 @@
         { result: "Splint & Bandage", requires: { "Cloth Rag": 2, "Tree Branch": 1 }, type: "useable" }
     ];
 
-    let inventory = { "Wild Berries": 1, "Muddy Water": 1 }; // Starter Kit
+    let inventory = { "Wild Berries": 1, "Muddy Water": 1 }; 
     const screen = document.getElementById("gameScreen");
 
-    // --- VISUAL RENDERING PIPELINE (Humanoid Graphics) ---
+    // --- VISUAL RENDERING PIPELINE ---
     function drawWorld() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         for (let r = 0; r < GRID_COUNT; r++) {
             for (let c = 0; c < GRID_COUNT; c++) {
                 let tile = MAP[r][c];
-                if (tile === 1) { ctx.fillStyle = "#1b4d3e"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // Tree
-                else if (tile === 2) { ctx.fillStyle = "#556b2f"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // Grass
-                else if (tile === 3) { ctx.fillStyle = "#4a4a4a"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // City Concrete Wall
-                else if (tile === 4) { ctx.fillStyle = "#708090"; ctx.fillRect(c*TILE_SIZE+10, r*TILE_SIZE+10, 20, 25); } // Trash Can
-                else if (tile === 5) { ctx.fillStyle = "#3e2723"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // Ruins Debris
-                else if (tile === 6) { ctx.fillStyle = "#b8860b"; ctx.fillRect(c*TILE_SIZE+5, r*TILE_SIZE+15, 30, 15); } // Scrap Piles
-                else { ctx.fillStyle = "#8bac0f"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } // Open Dirt
+                if (tile === 1) { ctx.fillStyle = "#1b4d3e"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } 
+                else if (tile === 2) { ctx.fillStyle = "#556b2f"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } 
+                else if (tile === 3) { ctx.fillStyle = "#4a4a4a"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } 
+                else if (tile === 4) { ctx.fillStyle = "#708090"; ctx.fillRect(c*TILE_SIZE+10, r*TILE_SIZE+10, 20, 25); } 
+                else if (tile === 5) { ctx.fillStyle = "#3e2723"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } 
+                else if (tile === 6) { ctx.fillStyle = "#b8860b"; ctx.fillRect(c*TILE_SIZE+5, r*TILE_SIZE+15, 30, 15); } 
+                else { ctx.fillStyle = "#8bac0f"; ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE); } 
                 
-                // Grid borders
                 ctx.strokeStyle = "rgba(15,56,15,0.15)";
                 ctx.strokeRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
         }
 
-        // DRAW HUMANOID SPRITE (Head, Torso, Blue Jeans Layout)
+        // HUMAN MODEL GRAPHIC DISPLAY
         let px = player.x * TILE_SIZE + 20;
         let py = player.y * TILE_SIZE + 20;
 
-        ctx.fillStyle = "#d2b48c"; // Skin Tone Head
+        ctx.fillStyle = "#d2b48c"; 
         ctx.fillRect(px - 6, py - 16, 12, 10);
-        ctx.fillStyle = "#000"; // Eyes
+        ctx.fillStyle = "#000"; 
         ctx.fillRect(px - 4, py - 12, 2, 2); ctx.fillRect(px + 2, py - 12, 2, 2);
         
-        ctx.fillStyle = "#ff0000"; // Red Shirt Torso
+        ctx.fillStyle = "#ff0000"; 
         ctx.fillRect(px - 8, py - 6, 16, 14);
         
-        ctx.fillStyle = "#0000ff"; // Blue Jeans Legs
+        ctx.fillStyle = "#0000ff"; 
         ctx.fillRect(px - 7, py + 8, 5, 10); ctx.fillRect(px + 2, py + 8, 5, 10);
     }
 
@@ -221,7 +321,7 @@
         document.getElementById("thirstFill").style.width = (stats.thirst * 0.8) + "px";
     }
 
-    // --- CONTROLLER WITH SCROLLING INTER-ZONE BORDERS ---
+    // --- CONTROLLER PIPELINE ---
     function handleInput(e) {
         let key = e.key.toLowerCase();
         let targetX = player.x; let targetY = player.y;
@@ -231,22 +331,20 @@
         if (key === "arrowleft" || key === "a") targetX--;
         if (key === "arrowright" || key === "d") targetX++;
 
-        // CROSS BORDERS SYSTEM (Bigger World Map simulation)
+        // Border crossing mapping
         if (targetX < 0) { generateNewZone(pickNextBiome()); player.x = 9; return drawWorld(); }
         if (targetX > 9) { generateNewZone(pickNextBiome()); player.x = 0; return drawWorld(); }
         if (targetY < 0) { generateNewZone(pickNextBiome()); player.y = 9; return drawWorld(); }
         if (targetY > 9) { generateNewZone(pickNextBiome()); player.y = 0; return drawWorld(); }
 
-        // Block movement into trees(1), buildings(3), and ruins walls(5)
         let nextTile = MAP[targetY][targetX];
         if (nextTile !== 1 && nextTile !== 3 && nextTile !== 5) {
             player.x = targetX; player.y = targetY;
+            playStepSound(); 
             
-            // Check for gathering loops (Grass, Trash Cans, Scrap Piles)
             if (nextTile === 2 || nextTile === 4 || nextTile === 6) {
                 checkGatherEvent();
             }
-            // Trigger rare wild animal dangers
             if (currentBiome === "FOREST" && Math.random() < 0.04) {
                 triggerAnimalAttack();
             }
@@ -260,12 +358,18 @@
         return available[Math.floor(Math.random() * available.length)];
     }
 
-    // --- ENCOUNTER CALCULATORS ---
     function checkGatherEvent() {
-        if (Math.random() < 0.40) { // 40% chance inside search nodes
+        if (Math.random() < 0.40) { 
             let list = LOOT_POOLS[currentBiome];
             let item = list[Math.floor(Math.random() * list.length)];
             inventory[item] = (inventory[item] || 0) + 1;
+            
+            if (["Canned Beans", "Old Battery", "Metal Plate", "Sharp Flint"].includes(item)) {
+                playRareSound();
+            } else {
+                playTrashSound();
+            }
+            
             screen.innerHTML = `🎒 Looted item: <span style="color:black;">[${item}]</span> added to inventory.`;
             updateInventoryUI();
         }
@@ -274,24 +378,25 @@
     function triggerAnimalAttack() {
         let hasWeapon = inventory["Makeshift Spear (DEFENSE)"] > 0;
         if (hasWeapon) {
+            playCraftSound();
             screen.innerHTML = `<span style="color:darkgreen;">🐺 A Wild Wolf attacked! You fended it off using your Makeshift Spear!</span>`;
         } else {
+            playTrashSound();
             stats.hp = Math.max(0, stats.hp - 25);
             screen.innerHTML = `<span style="color:darkred;">🐺 A Wild Wolf ambushed you out of the brush! You sustained -25 HP!</span>`;
             updateHUD();
         }
     }
 
-    // --- CONSUMPTION CORE ENGINE ---
     window.useItem = function(item) {
         if (!inventory[item]) return;
         
-        if (item === "Wild Berries") { stats.hunger = Math.min(100, stats.hunger + 15); stats.hp = Math.min(100, stats.hp + 2); }
-        else if (item === "Muddy Water") { stats.thirst = Math.min(100, stats.thirst + 20); stats.hp = Math.max(0, stats.hp - 10); screen.innerHTML = "🤢 The Muddy Water quenched thirst but made you sick (-10 HP)!"; }
-        else if (item === "Purified Water Bottle") { stats.thirst = Math.min(100, stats.thirst + 50); }
-        else if (item === "Cooked Trail-Mix" || item === "Canned Beans") { stats.hunger = Math.min(100, stats.hunger + 45); }
-        else if (item === "Splint & Bandage") { stats.hp = Math.min(100, stats.hp + 40); }
-        else { return; } // Not edible/usable item
+        if (item === "Wild Berries") { stats.hunger = Math.min(100, stats.hunger + 15); stats.hp = Math.min(100, stats.hp + 2); playStepSound(); }
+        else if (item === "Muddy Water") { stats.thirst = Math.min(100, stats.thirst + 20); stats.hp = Math.max(0, stats.hp - 10); playTrashSound(); screen.innerHTML = "🤢 The Muddy Water quenched thirst but made you sick (-10 HP)!"; }
+        else if (item === "Purified Water Bottle") { stats.thirst = Math.min(100, stats.thirst + 50); playRareSound(); }
+        else if (item === "Cooked Trail-Mix" || item === "Canned Beans") { stats.hunger = Math.min(100, stats.hunger + 45); playRareSound(); }
+        else if (item === "Splint & Bandage") { stats.hp = Math.min(100, stats.hp + 40); playRareSound(); }
+        else { return; } 
 
         inventory[item]--;
         if (inventory[item] === 0) delete inventory[item];
@@ -324,6 +429,7 @@
     }
 
     function craftItem(index) {
+        playCraftSound();
         const r = RECIPES[index];
         Object.keys(r.requires).forEach(item => { inventory[item] -= r.requires[item]; if(inventory[item]===0) delete inventory[item]; });
         inventory[r.result] = (inventory[r.result] || 0) + 1;
