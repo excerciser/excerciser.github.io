@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Scavenger RPG v1.1 - Generative Edition</title>
+    <title>Walking Around RPG v1.2</title>
     <style>
         body {
             background-color: #000;
@@ -71,7 +71,7 @@
 <body>
 
 <div class="game-window">
-    <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">💾 SCAVENGER.EXE</div>
+    <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">💾 WALKING_AROUND_RPG.EXE</div>
     
     <div class="audio-deck">
         <span>📻 GENERATIVE SOUND DECK:</span>
@@ -82,11 +82,11 @@
     </div>
 
     <div class="screen" id="gameScreen">
-        A wild world awaits... Click "EXPLORE" to search for items!
+        A wild world awaits... Click "WALK AROUND" to search for items!
     </div>
 
     <center>
-        <button class="btn" onclick="explore()">🥾 EXPLORE</button>
+        <button class="btn" onclick="explore()">🥾 WALK AROUND</button>
     </center>
 
     <div class="inventory-box">
@@ -110,7 +110,6 @@
     let bgmTimeout = null; 
     let isMusicPlaying = false;
 
-    // A Minor Pentatonic Scale
     const SCALE = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00];
     const RHYTHMS = [200, 400, 800];
 
@@ -120,7 +119,6 @@
         
         osc.type = type; 
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
-        
         gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime + startTime); 
         gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startTime + duration);
         
@@ -212,7 +210,7 @@
         const foundItem = items[Math.floor(Math.random() * items.length)];
         inventory[foundItem] = (inventory[foundItem] || 0) + 1;
 
-        screen.innerHTML = `💥 A wild encounter!<br><br>You searched the area and picked up:<br><span style="color: ${color}; font-size: 18px;">▶ ${foundItem} (${rarity.toUpperCase().replace('_', ' ')})</span>`;
+        screen.innerHTML = `💥 You took a few steps...<br><br>You looked around and picked up:<br><span style="color: ${color}; font-size: 18px;">▶ ${foundItem} (${rarity.toUpperCase().replace('_', ' ')})</span>`;
         screen.scrollTop = screen.scrollHeight;
         updateInventoryUI();
     }
