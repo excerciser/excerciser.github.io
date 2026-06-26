@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Scavenger RPG v1.0</title>
+    <title>Walking Around RPG v1.1</title>
     <style>
         body {
             background-color: #000;
-            color: #00ff00; /* Classic Game Boy Matrix Green */
+            color: #00ff00; 
             font-family: "Courier New", Courier, monospace;
             padding: 20px;
         }
@@ -20,11 +20,23 @@
             box-shadow: 5px 5px 0px #000;
         }
 
+        /* Sound Control Panel */
+        .audio-deck {
+            background: #a0a0a0;
+            border: 2px inset #fff;
+            padding: 5px;
+            margin-bottom: 10px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .screen {
-            background-color: #8bac0f; /* Authentic Game Boy screen olive green */
+            background-color: #8bac0f; 
             color: #0f380f;
             border: 3px inset #808080;
-            height: 200px;
+            height: 180px;
             padding: 15px;
             overflow-y: auto;
             font-weight: bold;
@@ -50,7 +62,7 @@
             border: 2px inset #808080;
             padding: 10px;
             margin-top: 10px;
-            max-height: 150px;
+            max-height: 140px;
             overflow-y: auto;
         }
 
@@ -62,19 +74,32 @@
 <div class="game-window">
     <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">💾 SCAVENGER.EXE</div>
     
-    <div class="screen" id="gameScreen">
-        A wild world awaits... Click "EXPLORE" to search for items!
+    <!-- Audio Deck Controller -->
+    <div class="audio-deck">
+        <span>📻 SOUND SYSTEM:</span>
+        <div>
+            <button class="btn" style="padding:2px 5px; font-size:11px;" onclick="toggleMusic()">🎵 Toggle BGM</button>
+            <span id="bgmStatus" style="font-weight:bold; color:red;">OFF</span>
+        </div>
     </div>
 
+    <!-- Game Screen Console -->
+    <div class="screen" id="gameScreen">
+        A wild world awaits... Click "EXPLORE" to search for items! (Turn on BGM above for chiptunes!)
+    </div>
+
+    <!-- Actions -->
     <center>
         <button class="btn" onclick="explore()">🥾 EXPLORE</button>
     </center>
 
+    <!-- Inventory Section -->
     <div class="inventory-box">
         <h3>🎒 INVENTORY</h3>
         <div id="inventoryList">Your bag is empty.</div>
     </div>
 
+    <!-- Crafting Section -->
     <div class="crafting-box">
         <h3>🔨 CRAFTING BENCH</h3>
         <div id="craftingList"></div>
@@ -86,7 +111,86 @@
 </div>
 
 <script>
-    // 1. The Loot Database
+    // --- AUDIO SYSTEM LAYER (Synth Generator) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let bgmInterval = null;
+    let isMusicPlaying = false;
+
+    // Helper function to synthesize a quick 8-bit sound wave tone
+    function playTone(freq, type, duration, startTime = 0) {
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.type = type; // square = retro arcade, triangle = deeper, sawtooth = buzzy
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+        
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + startTime);
+        // Linear fade-out to prevent popping audio cracks
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startTime + duration);
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.start(audioCtx.currentTime + startTime);
+        osc.stop(audioCtx.currentTime + startTime + duration);
+    }
+
+    // Dynamic Sound Effects
+    function playClickSound() {
+        playTone(150, 'triangle', 0.05);
+    }
+
+    function playRareSound() {
+        playTone(523.25, 'square', 0.1); // C5
+        playTone(659.25, 'square', 0.1, 0.1); // E5
+        playTone(783.99, 'square', 0.2, 0.2); // G5
+    }
+
+    function playTrashSound() {
+        playTone(80, 'sawtooth', 0.2); // Low buzz drop
+    }
+
+    function playCraftSound() {
+        playTone(440, 'square', 0.08);
+        playTone(880, 'square', 0.08, 0.08);
+        playTone(1200, 'square', 0.15, 0.16);
+    }
+
+    // 8-Bit Looping Background Music Sequence
+    function playBGM() {
+        if (!isMusicPlaying) return;
+        // Simple retro baseline melody notes array
+        const notes = [130.81, 146.83, 164.81, 196.00, 164.81, 146.83];
+        let count = 0;
+
+        bgmInterval = setInterval(() => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            let currentNote = notes[count % notes.length];
+            // Play a soft, pulsing bass square note every 300ms
+            playTone(currentNote, 'square', 0.2);
+            count++;
+        }, 300);
+    }
+
+    function toggleMusic() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        isMusicPlaying = !isMusicPlaying;
+        const status = document.getElementById("bgmStatus");
+        
+        if (isMusicPlaying) {
+            status.innerHTML = "ON";
+            status.style.color = "green";
+            playBGM();
+        } else {
+            status.innerHTML = "OFF";
+            status.style.color = "red";
+            clearInterval(bgmInterval);
+        }
+    }
+
+
+    // --- GAME ENGINE LAYER ---
     const LOOT_POOL = {
         trash: ["Crushed Soda Can", "Old Receipt", "Bitten Apple Core", "Lint Ball"],
         common: ["Rusty Screw", "Plastic Straw", "AA Battery", "Rubber Band", "Copper Wire"],
@@ -95,7 +199,6 @@
         one_of_a_kind: ["The Golden Microchip", "Ancient Cyber-Artifact"]
     };
 
-    // 2. Crafting Recipes (Requires: item name: quantity)
     const RECIPES = [
         { 
             result: "Retro Cyber-Deck (RARE)", 
@@ -108,30 +211,28 @@
     ];
 
     let inventory = {};
-
     const screen = document.getElementById("gameScreen");
     const invList = document.getElementById("inventoryList");
     const craftList = document.getElementById("craftingList");
 
-    // 3. Explore Logic (The Encounter Wheel)
     function explore() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
         let rand = Math.random() * 100;
         let rarity = "";
         let color = "";
 
-        if (rand < 40) { rarity = "trash"; color = "#666"; }
-        else if (rand < 75) { rarity = "common"; color = "#000"; }
-        else if (rand < 92) { rarity = "rare"; color = "blue"; }
-        else if (rand < 99) { rarity = "ultra_rare"; color = "purple"; }
-        else { rarity = "one_of_a_kind"; color = "red"; }
+        if (rand < 40) { rarity = "trash"; color = "#666"; playTrashSound(); }
+        else if (rand < 75) { rarity = "common"; color = "#000"; playClickSound(); }
+        else if (rand < 92) { rarity = "rare"; color = "blue"; playRareSound(); }
+        else if (rand < 99) { rarity = "ultra_rare"; color = "purple"; playRareSound(); }
+        else { rarity = "one_of_a_kind"; color = "red"; playRareSound(); }
 
         const items = LOOT_POOL[rarity];
         const foundItem = items[Math.floor(Math.random() * items.length)];
 
-        // Add to Inventory data
         inventory[foundItem] = (inventory[foundItem] || 0) + 1;
 
-        // Update Screen Text
         screen.innerHTML = `
             💥 A wild encounter!<br><br>
             You searched the area and picked up:<br>
@@ -142,21 +243,15 @@
         updateInventoryUI();
     }
 
-    // 4. Update Inventory Layout
     function updateInventoryUI() {
         if (Object.keys(inventory).length === 0) {
             invList.innerHTML = "Your bag is empty.";
             return;
         }
-
-        invList.innerHTML = Object.keys(inventory)
-            .map(item => `📦 <b>${item}</b> x${inventory[item]}`)
-            .join("<br>");
-
+        invList.innerHTML = Object.keys(inventory).map(item => `📦 <b>${item}</b> x${inventory[item]}`).join("<br>");
         updateCraftingUI();
     }
 
-    // 5. Update Crafting List Display
     function updateCraftingUI() {
         craftList.innerHTML = RECIPES.map((recipe, index) => {
             let requirementsMet = true;
@@ -175,25 +270,21 @@
         }).join("");
     }
 
-    // 6. Execute Crafting
     function craftItem(recipeIndex) {
+        playCraftSound();
         const recipe = RECIPES[recipeIndex];
         
-        // Deduct materials
         Object.keys(recipe.requires).forEach(reqItem => {
             inventory[reqItem] -= recipe.requires[reqItem];
             if (inventory[reqItem] === 0) delete inventory[reqItem];
         });
 
-        // Add crafted item
         inventory[recipe.result] = (inventory[recipe.result] || 0) + 1;
-
         screen.innerHTML = `🛠️ SUCCESS!<br><br>You used your workbench to construct:<br><span style="color: darkgreen; font-size: 18px;">✨ ${recipe.result} ✨</span>`;
         
         updateInventoryUI();
     }
 
-    // Initialize layout
     updateCraftingUI();
 </script>
 
